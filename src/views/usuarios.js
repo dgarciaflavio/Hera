@@ -7,22 +7,25 @@ function renderUsuarios(usuarios, usuarioLogado) {
     usuarios.forEach(u => {
         let permissoesArr = [];
         try {
-            permissoesArr = JSON.parse(u.permissoes);
-        } catch(e) {}
+            const parsed = JSON.parse(u.permissoes);
+            permissoesArr = Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            permissoesArr = Array.isArray(u.permissoes) ? u.permissoes : [];
+        }
         
         let badges = '';
-        if (u.is_admin === 1 || permissoesArr.includes('todas')) {
+        if (u.is_admin === 1 || (Array.isArray(permissoesArr) && permissoesArr.includes('todas'))) {
             badges = '<span class="badge" style="background:#8e44ad;">Acesso Total</span>';
-        } else {
+        } else if (Array.isArray(permissoesArr)) {
             permissoesArr.forEach(p => {
                 badges += `<span class="badge" style="background:#34495e; margin-right:4px;">${p}</span>`;
             });
         }
 
-        const btnEditarDados = u.is_admin === 0 ? `<button class="btn-sm btn-edit" onclick="abrirModalDados(${u.id}, '${u.nome || ''}', '${u.login}')">✏️ Editar Perfil</button>` : '';
-        const btnPermissoes = u.is_admin === 0 ? `<button class="btn-sm btn-perm" onclick='abrirModalPermissoes(${u.id}, ${JSON.stringify(permissoesArr)})'>🛡️ Permissões</button>` : '';
-        const btnResetar = u.is_admin === 0 ? `<button class="btn-sm btn-warn" onclick="resetarSenha(${u.id})">🔑 Resetar Senha</button>` : '';
-        const btnExcluir = u.is_admin === 0 ? `<button class="btn-sm btn-danger" onclick="excluirUsuario(${u.id}, '${u.login}')">🗑️️ Excluir</button>` : '';
+        const btnEditarDados = u.is_admin === 0 ? `<button class="btn-sm btn-edit" onclick="abrirModalDados(${u.id}, '${(u.nome || '').replace(/'/g, "\\'")}', '${(u.login || '').replace(/'/g, "\\'")}')" style="display: inline-block;">✏️ Editar Perfil</button>` : '';
+        const btnPermissoes = u.is_admin === 0 ? `<button class="btn-sm btn-perm" onclick='abrirModalPermissoes(${u.id}, ${JSON.stringify(permissoesArr)})' style="display: inline-block;">🛡️ Permissões</button>` : '';
+        const btnResetar = u.is_admin === 0 ? `<button class="btn-sm btn-warn" onclick="resetarSenha(${u.id})" style="display: inline-block;">🔑 Resetar Senha</button>` : '';
+        const btnExcluir = u.is_admin === 0 ? `<button class="btn-sm btn-danger" onclick="excluirUsuario(${u.id}, '${(u.login || '').replace(/'/g, "\\'")}')" style="display: inline-block;">🗑️️ Excluir</button>` : '';
 
         linhasTabela += `
             <tr>
@@ -243,7 +246,8 @@ function renderUsuarios(usuarios, usuarioLogado) {
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.erro);
                     alert(data.mensagem);
-                    window.location.reload();
+                    fecharModal('modalDados');
+                    setTimeout(() => window.location.reload(), 800);
                 } catch(e) { alert('Erro: ' + e.message); }
             }
 
@@ -251,7 +255,7 @@ function renderUsuarios(usuarios, usuarioLogado) {
             function abrirModalPermissoes(id, permissoesAtuais) {
                 document.getElementById('permUserId').value = id;
                 document.querySelectorAll('.chk-edit').forEach(c => {
-                    c.checked = permissoesAtuais.includes('todas') || permissoesAtuais.includes(c.value);
+                    c.checked = (Array.isArray(permissoesAtuais) && (permissoesAtuais.includes('todas') || permissoesAtuais.includes(c.value)));
                 });
                 document.getElementById('modalPermissoes').style.display = 'flex';
             }
@@ -268,7 +272,8 @@ function renderUsuarios(usuarios, usuarioLogado) {
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.erro);
                     alert(data.mensagem);
-                    window.location.reload();
+                    fecharModal('modalPermissoes');
+                    setTimeout(() => window.location.reload(), 800);
                 } catch(e) { alert('Erro: ' + e.message); }
             }
 
@@ -280,6 +285,7 @@ function renderUsuarios(usuarios, usuarioLogado) {
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.erro);
                     alert(data.mensagem);
+                    setTimeout(() => window.location.reload(), 500);
                 } catch(e) { alert('Erro: ' + e.message); }
             }
 
@@ -289,6 +295,7 @@ function renderUsuarios(usuarios, usuarioLogado) {
                     const res = await fetch('/api/usuarios/' + id, { method: 'DELETE' });
                     const data = await res.json();
                     if (!res.ok) throw new Error(data.erro);
+                    alert(data.mensagem);
                     window.location.reload();
                 } catch(e) { alert('Erro: ' + e.message); }
             }
